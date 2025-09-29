@@ -1,0 +1,220 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: django_db_joshi
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - django_net
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: django_redis_joshi
+    networks:
+      - django_net
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: django_web_joshi
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:6543 --workers 3 --timeout 180"
+    volumes:
+      - .:/app
+      - static_volume:/app/config/staticfiles
+    ports:
+      - "6543:6543"
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+    networks:
+      - django_net
+    restart: unless-stopped
+
+  websocket:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: django_websocket_joshi
+    command: >
+      sh -c "daphne -b 0.0.0.0 -p 6724 config.asgi:application"
+    volumes:
+      - .:/app
+    ports:
+      - "6724:6724"
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+    networks:
+      - django_net
+    restart: unless-stopped
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: django_celery_joshi
+    command: celery -A config worker --loglevel=info
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - web
+      - redis
+    networks:
+      - django_net
+    restart: unless-stopped
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: django_celery_beat_joshi
+    command: celery -A config beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - web
+      - redis
+    networks:
+      - django_net
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  static_volume:
+
+networks:
+  django_net:
+    driver: bridge
+
+
+
+
+# version: '3.8'
+
+# services:
+#   db:
+#     image: postgres:15-alpine
+#     container_name: django_db_joshi
+#     environment:
+#       POSTGRES_DB: ${POSTGRES_DB}
+#       POSTGRES_USER: ${POSTGRES_USER}
+#       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+#     volumes:
+#       - postgres_data:/var/lib/postgresql/data
+#     networks:
+#       - django_net
+#     restart: unless-stopped
+
+#   redis:
+#     image: redis:7-alpine
+#     container_name: django_redis_joshi
+#     networks:
+#       - django_net
+#     restart: unless-stopped
+
+#   web:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: django_web_joshi
+#     command: >
+#       sh -c "python manage.py migrate &&
+#              python manage.py collectstatic --noinput &&
+#              gunicorn config.wsgi:application --bind 0.0.0.0:7777 --workers 3 --timeout 180"
+#     volumes:
+#       - .:/app
+#       - static_volume:/app/config/staticfiles
+#     ports:
+#       - "7777:7777"
+#     env_file:
+#       - .env
+#     depends_on:
+#       - db
+#       - redis
+#     networks:
+#       - django_net
+#     restart: unless-stopped
+  
+#   websocket:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: django_websocket_joshi
+#     command: daphne -b 0.0.0.0 -p 7778 config.asgi:application
+#     volumes:
+#       - .:/app
+#     expose:
+#       - "7778"
+#     ports:
+#       - "7778:7778"
+#     env_file:
+#       - .env
+#     depends_on:
+#       - db
+#       - redis
+#     networks:
+#       - django_net
+#     restart: unless-stopped
+
+#   celery:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: django_celery_joshi
+#     command: celery -A config worker --loglevel=info
+#     volumes:
+#       - .:/app
+#     env_file:
+#       - .env
+#     depends_on:
+#       - web
+#       - redis
+#     networks:
+#       - django_net
+#     restart: unless-stopped
+
+#   celery-beat:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: django_celery_beat_joshi
+#     command: celery -A config beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+#     volumes:
+#       - .:/app
+#     env_file:
+#       - .env
+#     depends_on:
+#       - web
+#       - redis
+#     networks:
+#       - django_net
+#     restart: unless-stopped
+
+# volumes:
+#   postgres_data:
+#   static_volume:
+
+# networks:
+#   django_net:
+#     driver: bridge
+

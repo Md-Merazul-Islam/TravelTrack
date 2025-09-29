@@ -48,24 +48,25 @@ docker-compose up --build
 
 docker-compose exec web python manage.py migrate
 docker-compose exec web python manage.py createsuperuser
+```
 
 
 Access:
 Backend API: http://localhost:8000
 Admin Panel: http://localhost:8000/admin
-```
 
 Option 2 — Local Development
 
-````
+```
     python -m venv venv
     source venv/bin/activate    # Mac/Linux
     venv\Scripts\activate      # Windows
-
+    
     pip install -r requirements.txt
-
+    
     python manage.py migrate
     python manage.py runserver
+
 ```
 
 ⚡ CRUD Generator
@@ -73,12 +74,13 @@ Option 2 — Local Development
 Generate complete CRUD applications instantly:
 ````
     python manage.py create_crud_app <app_name> --model <ModelName>
-
 ````
 Auto-generates: Model, Serializer, ViewSet, URLs, Admin, Tests
 
 
 🛠 Common Commands
+
+```
 # Docker commands
 docker-compose logs -f
 docker-compose down
@@ -93,7 +95,7 @@ python manage.py runserver
 # Database
 docker-compose exec db pg_dump -U myuser mydb > backup.sql
 
-
+```
 
 💡 Author
 
@@ -101,8 +103,6 @@ Made with ❤️ by Md Merazul Islam
 
 ⭐ Star this repo if it helped you!
 
-
----
 
 If you want, I can now also make a **nice diagram of the workflow** showing:  
 Traveler → Booking → Approval → Delivery → Commission → Chat.  
